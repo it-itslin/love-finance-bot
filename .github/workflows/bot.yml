@@ -2,9 +2,12 @@ name: Run Telegram Bot
 
 on:
   schedule:
-    # Запуск каждые 10 минут
     - cron: '*/10 * * * *'
-  workflow_dispatch: # Позволяет запустить вручную кнопкой в интерфейсе
+  workflow_dispatch: 
+
+# ЭТА СТРОЧКА ДАЕТ ПРАВА НА ЗАПИСЬ ФАЙЛОВ
+permissions:
+  contents: write
 
 jobs:
   run-bot:
@@ -27,7 +30,7 @@ jobs:
           GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: python bot.py
-      
+        
       - name: Save data.json to repository
         run: |
           git config --global user.name 'GitHub Actions'
