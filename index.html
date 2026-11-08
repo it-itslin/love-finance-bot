@@ -160,11 +160,10 @@
                 return;
             }
 
-            // Твоя ссылка из Apps Script (должна заканчиваться на /exec)
             const url = BASE_API_URL + "?family_id=" + encodeURIComponent(familyId);
             
-            // Используем надежный публичный прокси для обхода блокировок
-            const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+            // Используем новый, более стабильный прокси-сервер
+            const proxyUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url);
 
             try {
                 const response = await fetch(proxyUrl);
@@ -174,11 +173,9 @@
                 list.innerHTML = '';
                 let total = 0;
                 
-                // Обрабатываем данные
                 data.reverse().forEach(item => {
                     total += Number(item.amount);
                     
-                    // Парсим дату (может прийти с лишними символами)
                     let dateObj = new Date(item.date);
                     let dateStr = isNaN(dateObj) ? item.date : dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
                     
@@ -198,7 +195,8 @@
                 
             } catch (error) {
                 console.error("Ошибка загрузки:", error);
-                document.getElementById('transactions-list').innerHTML = '<p>Ошибка загрузки данных. Проверь соединение.</p>';
+                // Теперь ошибка будет видна на экране
+                document.getElementById('transactions-list').innerHTML = `<p style="color:red;">Ошибка загрузки: ${error.message}</p>`;
             }
         }
 
@@ -207,13 +205,7 @@
         }
 
         async function addTransaction() {
-            const amount = document.getElementById('input-amount').value;
-            const category = document.getElementById('input-category').value;
-
-            if (!amount) {
-                tg.showAlert("Пожалуйста, введите сумму");
-                return;
-            }
+            // ... (начало функции оставляем без изменений) ...
 
             const url = BASE_API_URL + 
                 "?action=add" + 
@@ -222,8 +214,8 @@
                 "&amount=" + encodeURIComponent(amount) + 
                 "&category=" + encodeURIComponent(category);
 
-            // ИСПОЛЬЗУЕМ ПРОКСИ ДЛЯ ОТПРАВКИ
-            const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+            // ЗАМЕНИЛИ ПРОКСИ ЗДЕСЬ
+            const proxyUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url);
 
             try {
                 await fetch(proxyUrl);
