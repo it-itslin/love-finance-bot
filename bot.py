@@ -49,7 +49,7 @@ async def cmd_add(message: types.Message):
         
         # Записываем в таблицу: [ID юзера, Сумма, Категория, Дата]
         sheet = get_sheet()
-        sheet.append_row([str(message.from_user.id), amount, category, str(message.date)])
+        sheet.append_row([family_id, user_id, amount, category, str(message.date)])
         
         await message.answer(f"✅ Записано: {amount} руб. на {category}")
     except Exception as e:
