@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 import gspread
 from google.oauth2.service_account import Credentials
+from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton 
 
 # Получаем секреты
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
