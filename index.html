@@ -199,39 +199,32 @@
                 return;
             }
 
+            // Собираем ссылку с данными
             const url = BASE_API_URL + 
                 "?action=add" + 
-                "&family_id=" + familyId + 
-                "&user_id=" + userId + 
-                "&amount=" + amount + 
+                "&family_id=" + encodeURIComponent(familyId) + 
+                "&user_id=" + encodeURIComponent(userId) + 
+                "&amount=" + encodeURIComponent(amount) + 
                 "&category=" + encodeURIComponent(category);
 
-            try {
-                // СОЗДАЕМ СКРЫТЫЙ IFRAME И ФОРМУ
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.name = 'hidden_iframe';
-                document.body.appendChild(iframe);
+            // ДИАГНОСТИКА: Показываем ссылку
+            console.log("Отправляем запрос:", url);
+            tg.showAlert("Проверка ссылки:\n" + url); // Временно оставим, чтобы ты увидел ссылку
 
-                const form = document.createElement('form');
-                form.action = url;
-                form.method = 'GET';
-                form.target = 'hidden_iframe'; // Отправляем в iframe, чтобы страница не перезагружалась
-                document.body.appendChild(form);
-                
-                form.submit(); // Отправляем
+            try {
+                // ТРЮК: Создаем невидимую картинку. 
+                // Браузер отправит GET-запрос, чтобы ее загрузить, и не заблокирует его.
+                const img = new Image();
+                img.src = url;
 
                 // Закрываем окно и очищаем
                 document.getElementById('modal').style.display = 'none';
                 document.getElementById('input-amount').value = '';
-                tg.showAlert("Трата успешно добавлена!");
                 
-                // Ждем 1.5 секунды (чтобы Google успел записать) и перезагружаем список
+                // Ждем 1.5 секунды и перезагружаем список
                 setTimeout(() => {
                     loadData();
-                    // Удаляем форму и iframe за ненадобностью
-                    document.body.removeChild(form);
-                    document.body.removeChild(iframe);
+                    tg.showAlert("Трата успешно добавлена!");
                 }, 1500);
                 
             } catch (error) {
