@@ -34,12 +34,9 @@ jobs:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: python bot.py
         
-      - name: Save data.json to repository
-        run: |
-          touch data.json
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
-          git add data.json
-          git commit -m "Update data.json [skip ci]" || exit 0
-          # ПРИНУДИТЕЛЬНАЯ ОТПРАВКА (перезаписываем старый файл на сервере)
-          git push --force origin main
+      # ВМЕСТО СЛОЖНЫХ КОМАНД ИСПОЛЬЗУЕМ ГОТОВЫЙ ЭКШЕН
+      - name: Commit data.json
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update data.json
+          file_pattern: data.json
