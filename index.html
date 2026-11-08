@@ -199,29 +199,26 @@
                 return;
             }
 
-            const data = {
-                family_id: familyId,
-                user_id: userId,
-                amount: amount,
-                category: category
-            };
+            // Собираем данные прямо в ссылку (GET-запрос)
+            // encodeURIComponent нужен, чтобы русские буквы (например, "Еда") передались правильно
+            const url = BASE_API_URL + 
+                "?action=add" + 
+                "&family_id=" + familyId + 
+                "&user_id=" + userId + 
+                "&amount=" + amount + 
+                "&category=" + encodeURIComponent(category);
 
             try {
-                // Отправляем данные в Apps Script
-                await fetch(BASE_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', 
-                    headers: {
-                        'Content-Type': 'text/plain' // <--- ИМЕННО text/plain
-                    },
-                    body: JSON.stringify(data)
-                });
+                // Просто открываем ссылку, Google Apps Script запишет данные
+                await fetch(url);
                 
+                // Закрываем окно, очищаем форму
                 document.getElementById('modal').style.display = 'none';
                 document.getElementById('input-amount').value = '';
                 tg.showAlert("Трата успешно добавлена!");
                 
-                setTimeout(loadData, 1500); // Даем чуть больше времени на запись
+                // Ждем 1.5 секунды (чтобы Google успел записать) и перезагружаем список
+                setTimeout(loadData, 1500);
                 
             } catch (error) {
                 tg.showAlert("Ошибка при отправке");
