@@ -157,7 +157,11 @@
         async function loadData() {
             if (!familyId) return;
             try {
-                const response = await fetch(BASE_API_URL + "?family_id=" + familyId);
+                const url = BASE_API_URL + "?family_id=" + encodeURIComponent(familyId);
+                // ИСПОЛЬЗУЕМ ПРОКСИ ДЛЯ ЗАГРУЗКИ
+                const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+                
+                const response = await fetch(proxyUrl);
                 const data = await response.json();
                 
                 const list = document.getElementById('transactions-list');
@@ -199,7 +203,6 @@
                 return;
             }
 
-            // Собираем ссылку с данными
             const url = BASE_API_URL + 
                 "?action=add" + 
                 "&family_id=" + encodeURIComponent(familyId) + 
@@ -207,28 +210,20 @@
                 "&amount=" + encodeURIComponent(amount) + 
                 "&category=" + encodeURIComponent(category);
 
-            // ДИАГНОСТИКА: Показываем ссылку
-            console.log("Отправляем запрос:", url);
-            tg.showAlert("Проверка ссылки:\n" + url); // Временно оставим, чтобы ты увидел ссылку
+            // ИСПОЛЬЗУЕМ ПРОКСИ ДЛЯ ОТПРАВКИ
+            const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
 
             try {
-                // ТРЮК: Создаем невидимую картинку. 
-                // Браузер отправит GET-запрос, чтобы ее загрузить, и не заблокирует его.
-                const img = new Image();
-                img.src = url;
-
-                // Закрываем окно и очищаем
+                await fetch(proxyUrl);
+                
                 document.getElementById('modal').style.display = 'none';
                 document.getElementById('input-amount').value = '';
+                tg.showAlert("Трата успешно добавлена!");
                 
-                // Ждем 1.5 секунды и перезагружаем список
-                setTimeout(() => {
-                    loadData();
-                    tg.showAlert("Трата успешно добавлена!");
-                }, 1500);
+                setTimeout(loadData, 1500);
                 
             } catch (error) {
-                tg.showAlert("Ошибка при отправке");
+                tg.showAlert("Ошибка при отправке: " + error.message);
             }
         }
 
