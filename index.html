@@ -155,12 +155,18 @@
         const userId = user ? user.id : "unknown";
 
         async function loadData() {
-            if (!familyId) return;
+            if (!familyId) {
+                document.getElementById('transactions-list').innerHTML = '<p>Код семьи не передан.</p>';
+                return;
+            }
+
+            // Твоя ссылка из Apps Script (должна заканчиваться на /exec)
+            const url = BASE_API_URL + "?family_id=" + encodeURIComponent(familyId);
+            
+            // Используем надежный публичный прокси для обхода блокировок
+            const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+
             try {
-                const url = BASE_API_URL + "?family_id=" + encodeURIComponent(familyId);
-                // ИСПОЛЬЗУЕМ ПРОКСИ ДЛЯ ЗАГРУЗКИ
-                const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
-                
                 const response = await fetch(proxyUrl);
                 const data = await response.json();
                 
@@ -168,10 +174,13 @@
                 list.innerHTML = '';
                 let total = 0;
                 
+                // Обрабатываем данные
                 data.reverse().forEach(item => {
                     total += Number(item.amount);
+                    
+                    // Парсим дату (может прийти с лишними символами)
                     let dateObj = new Date(item.date);
-                    let dateStr = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                    let dateStr = isNaN(dateObj) ? item.date : dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
                     
                     const div = document.createElement('div');
                     div.className = 'transaction';
@@ -184,9 +193,12 @@
                     `;
                     list.appendChild(div);
                 });
+                
                 document.getElementById('total-amount').textContent = total + ' ₽';
+                
             } catch (error) {
                 console.error("Ошибка загрузки:", error);
+                document.getElementById('transactions-list').innerHTML = '<p>Ошибка загрузки данных. Проверь соединение.</p>';
             }
         }
 
