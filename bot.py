@@ -26,7 +26,18 @@ def get_sheet():
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я готов записывать твои траты.\nНапиши: `/add 500 Еда`", parse_mode="Markdown")
+    # ВСТАВЬ СЮДА СВОЮ ССЫЛКУ ИЗ GITHUB PAGES
+    web_app_url = "https://it-itslin.github.io/love-finance-bot/"
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📊 Открыть приложение", web_app=WebAppInfo(url=web_app_url))]
+    ])
+    
+    await message.answer(
+        "Привет! Я готов записывать твои траты.\nНапиши: `/add 500 Еда`\n\nИли открой красивое приложение:", 
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
 
 @dp.message(Command("add"))
 async def cmd_add(message: types.Message):
