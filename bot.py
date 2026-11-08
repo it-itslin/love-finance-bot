@@ -16,27 +16,51 @@ SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Простое хранилище в памяти (сбросится при перезапуске, но для старта сойдет)
-# В будущем здесь будет реальная база данных
-user_family = {} 
-
-def get_sheet():
+# Подключение к таблице
+def get_spreadsheet():
     creds_dict = json.loads(GOOGLE_CREDS_JSON)
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
-    return client.open_by_key(SPREADSHEET_ID).sheet1
+    return client.open_by_key(SPREADSHEET_ID)
 
-# Генератор случайных кодов для семьи
+# Поиск семьи пользователя в таблице Users
+def get_user_family(user_id):
+    try:
+        ws = get_spreadsheet().worksheet("Users")
+        records = ws.get_all_values()
+        for row in records[1:]: # Пропускаем заголовки
+            if row[0] == str(user_id):
+                return row[1]
+        return None
+    except Exception as e:
+        print(f"Ошибка чтения Users: {e}")
+        return None
+
+# Сохранение семьи пользователя
+def save_user_family(user_id, family_id):
+    try:
+        ws = get_spreadsheet().worksheet("Users")
+        # Проверяем, есть ли уже запись
+        records = ws.get_all_values()
+        for i, row in enumerate(records[1:], start=2):
+            if row[0] == str(user_id):
+                ws.update_cell(i, 2, family_id) # Обновляем
+                return
+        
+        # Если нет - добавляем
+        ws.append_row([str(user_id), family_id])
+    except Exception as e:
+        print(f"Ошибка записи Users: {e}")
+
 def generate_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = str(message.from_user.id)
-    family_id = user_family.get(user_id)
+    family_id = get_user_family(user_id)
     
-    # Если у пользователя нет семьи, просим создать
     if not family_id:
         await message.answer("Привет! Сначала создай свою пару командой `/create_family`, или присоединись к существующей: `/join_family КОД`.")
         return
@@ -56,13 +80,15 @@ async def cmd_start(message: types.Message):
 @dp.message(Command("create_family"))
 async def cmd_create_family(message: types.Message):
     user_id = str(message.from_user.id)
-    if user_id in user_family:
-        await message.answer(f"У тебя уже есть семья. Твой код: `{user_family[user_id]}`")
+    family_id = get_user_family(user_id)
+    
+    if family_id:
+        await message.answer(f"У тебя уже есть семья. Твой код: `{family_id}`")
         return
         
     new_code = generate_code()
-    user_family[user_id] = new_code
-    await message.answer(f"✅ Семья создана! Твой код приглашения: `{new_code}`\nОтправь его своей второй половинке, чтобы она ввела команду `/join_family {new_code}`")
+    save_user_family(user_id, new_code)
+    await message.answer(f"✅ Семья создана! Твой код приглашения: `{new_code}`\nОтправь его партнеру: `/join_family {new_code}`")
 
 @dp.message(Command("join_family"))
 async def cmd_join_family(message: types.Message, command: CommandObject):
@@ -72,13 +98,13 @@ async def cmd_join_family(message: types.Message, command: CommandObject):
         return
         
     code = command.args.upper()
-    user_family[user_id] = code
+    save_user_family(user_id, code)
     await message.answer(f"✅ Ты присоединился к семье с кодом `{code}`!")
 
 @dp.message(Command("add"))
 async def cmd_add(message: types.Message):
     user_id = str(message.from_user.id)
-    family_id = user_family.get(user_id)
+    family_id = get_user_family(user_id)
     
     if not family_id:
         await message.answer("Сначала создай семью `/create_family` или присоединись `/join_family КОД`")
@@ -89,8 +115,8 @@ async def cmd_add(message: types.Message):
         amount = text[1]
         category = text[2] if len(text) > 2 else "Без категории"
         
-        sheet = get_sheet()
-        # Записываем: [Family_ID, User_ID, Сумма, Категория, Дата]
+        # Записываем в ПЕРВЫЙ лист (с тратами)
+        sheet = get_spreadsheet().sheet1
         sheet.append_row([family_id, user_id, amount, category, str(message.date)])
         
         await message.answer(f"✅ Записано: {amount} руб. на {category}")
