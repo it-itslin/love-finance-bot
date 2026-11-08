@@ -199,6 +199,7 @@
                 return;
             }
 
+            // Собираем ссылку
             const url = BASE_API_URL + 
                 "?action=add" + 
                 "&family_id=" + familyId + 
@@ -206,22 +207,19 @@
                 "&amount=" + amount + 
                 "&category=" + encodeURIComponent(category);
 
+            // ДИАГНОСТИКА: Показываем ссылку на экране!
+            tg.showAlert("Проверка ссылки:\n" + url);
+
             try {
-                // Отправляем данные. no-cors нужен, чтобы браузер не блокировал запрос
-                await fetch(url, {
-                    method: 'GET',
-                    mode: 'no-cors' 
-                });
+                await fetch(url, { method: 'GET', mode: 'no-cors' });
                 
                 document.getElementById('modal').style.display = 'none';
                 document.getElementById('input-amount').value = '';
-                tg.showAlert("Трата успешно добавлена!");
-                
                 setTimeout(loadData, 1500);
                 
             } catch (error) {
-                console.error(error);
-                tg.showAlert("Ошибка при отправке");
+                // Если ошибка, показываем её текст
+                tg.showAlert("Ошибка сети: " + error.message);
             }
         }
 
