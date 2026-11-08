@@ -12,7 +12,7 @@
             color: var(--tg-theme-text-color, #000000);
             margin: 0;
             padding: 16px;
-            padding-bottom: 80px; /* Место под кнопку */
+            padding-bottom: 80px;
         }
         .header { text-align: center; margin-bottom: 24px; }
         .header h1 { margin: 0; font-size: 24px; }
@@ -46,7 +46,6 @@
         .transaction .sum { font-weight: bold; }
         .transaction .sum.expense { color: #FF3B30; }
 
-        /* Стили для кнопки добавления и модального окна */
         .fab {
             position: fixed;
             bottom: 24px;
@@ -118,12 +117,10 @@
     </div>
 
     <div class="section-title">Последние траты</div>
-    <div id="transactions-list"></div>
+    <div id="transactions-list"><p style="color:gray;">Загрузка...</p></div>
 
-    <!-- Кнопка Плюс -->
     <button class="fab" onclick="openModal()">+</button>
 
-    <!-- Окно добавления траты -->
     <div class="modal-overlay" id="modal">
         <div class="modal-content">
             <h3>Новая трата</h3>
@@ -141,27 +138,32 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        const user = tg.initDataUnsafe?.user;
-        if (user) {
-            document.getElementById('user-name').textContent = user.first_name;
+        // Безопасная инициализация Telegram
+        let tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.expand();
+            const user = tg.initDataUnsafe?.user;
+            if (user) {
+                document.getElementById('user-name').textContent = user.first_name;
+            }
         }
 
         const urlParams = new URLSearchParams(window.location.search);
         const familyId = urlParams.get('family_id');
-        const userId = user ? user.id : "unknown";
+        const userId = tg?.initDataUnsafe?.user?.id || "unknown";
 
-        // ЗАГРУЗКА ДАННЫХ (из локального файла на GitHub)
         async function loadData() {
-            if (!familyId) return;
+            if (!familyId) {
+                document.getElementById('transactions-list').innerHTML = '<p>Ошибка: нет ID семьи.</p>';
+                return;
+            }
+
             try {
-                // Мы будем брать данные из файла data.json на твоем же сайте (GitHub Pages)
-                const response = await fetch('data.json'); 
-                const allData = await response.json();
+                // Добавляем ?t=... чтобы браузер не кешировал старый файл
+                const response = await fetch('data.json?t=' + Date.now());
+                if (!response.ok) throw new Error("Файл не найден");
                 
-                // Фильтруем только траты нашей семьи
+                const allData = await response.json();
                 const data = allData[familyId] || [];
                 
                 const list = document.getElementById('transactions-list');
@@ -186,9 +188,11 @@
                 });
                 
                 document.getElementById('total-amount').textContent = total + ' ₽';
+                if (data.length === 0) list.innerHTML = '<p style="color:gray;">Трат пока нет.</p>';
+                
             } catch (error) {
                 console.error("Ошибка загрузки:", error);
-                document.getElementById('transactions-list').innerHTML = `<p style="color:gray;">Обновите данные в боте командой /start</p>`;
+                document.getElementById('transactions-list').innerHTML = `<p style="color:red;">Не удалось загрузить данные. Напиши боту /start, чтобы обновить файл.</p>`;
             }
         }
 
@@ -196,24 +200,27 @@
             document.getElementById('modal').style.display = 'flex';
         }
 
-        // ДОБАВЛЕНИЕ ЧЕРЕЗ TELEGRAM
         function addTransaction() {
             const amount = document.getElementById('input-amount').value;
             const category = document.getElementById('input-category').value;
 
             if (!amount) {
-                tg.showAlert("Пожалуйста, введите сумму");
+                if (tg) tg.showAlert("Пожалуйста, введите сумму");
+                else alert("Пожалуйста, введите сумму");
                 return;
             }
 
-            // Отправляем данные боту. Приложение закроется само.
-            const dataToSend = {
-                amount: amount,
-                category: category,
-                family_id: familyId
-            };
-            
-            tg.sendData(JSON.stringify(dataToSend));
+            if (tg && tg.sendData) {
+                // Отправляем данные боту
+                const dataToSend = {
+                    amount: amount,
+                    category: category,
+                    family_id: familyId
+                };
+                tg.sendData(JSON.stringify(dataToSend));
+            } else {
+                alert("Эта кнопка работает только внутри Telegram!");
+            }
         }
 
         loadData();
