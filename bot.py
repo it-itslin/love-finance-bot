@@ -144,7 +144,26 @@ async def cmd_join_family(message: types.Message, command: CommandObject):
 
 async def main():
     print("Бот запущен...")
-    await dp.start_polling(bot, timeout=25)
+    
+    # Обновляем файл сразу при старте
+    update_json_file() 
+    
+    # Запускаем бота в фоне
+    polling_task = asyncio.create_task(dp.start_polling(bot))
+    
+    # Ждем 40 секунд (чтобы обработать сообщения)
+    await asyncio.sleep(40)
+    
+    # Останавливаем бота
+    polling_task.cancel()
+    try:
+        await polling_task
+    except asyncio.CancelledError:
+        pass
+        
+    # Обновляем файл еще раз перед выходом (чтобы сохранить новые данные)
+    update_json_file()
+    print("Бот завершил работу, данные сохранены.")
 
 if __name__ == "__main__":
     asyncio.run(main())
