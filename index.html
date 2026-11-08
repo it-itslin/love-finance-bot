@@ -162,8 +162,10 @@
 
             const url = BASE_API_URL + "?family_id=" + encodeURIComponent(familyId);
             
-            // Используем новый, более стабильный прокси-сервер
-            const proxyUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url);
+            // ВСТАВЬ СЮДА АДРЕС СВОЕГО CLOUDFLARE WORKER (без слэша на конце)
+            const workerUrl = "https://wispy-truth-ba5e.t95n47sd7r.workers.dev"; 
+            
+            const proxyUrl = workerUrl + "?url=" + encodeURIComponent(url);
 
             try {
                 const response = await fetch(proxyUrl);
@@ -195,8 +197,7 @@
                 
             } catch (error) {
                 console.error("Ошибка загрузки:", error);
-                // Теперь ошибка будет видна на экране
-                document.getElementById('transactions-list').innerHTML = `<p style="color:red;">Ошибка загрузки: ${error.message}</p>`;
+                document.getElementById('transactions-list').innerHTML = `<p style="color:red;">Ошибка: ${error.message}</p>`;
             }
         }
 
@@ -205,7 +206,13 @@
         }
 
         async function addTransaction() {
-            // ... (начало функции оставляем без изменений) ...
+            const amount = document.getElementById('input-amount').value;
+            const category = document.getElementById('input-category').value;
+
+            if (!amount) {
+                tg.showAlert("Пожалуйста, введите сумму");
+                return;
+            }
 
             const url = BASE_API_URL + 
                 "?action=add" + 
@@ -214,8 +221,9 @@
                 "&amount=" + encodeURIComponent(amount) + 
                 "&category=" + encodeURIComponent(category);
 
-            // ЗАМЕНИЛИ ПРОКСИ ЗДЕСЬ
-            const proxyUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url);
+            // ВСТАВЬ СЮДА АДРЕС СВОЕГО CLOUDFLARE WORKER
+            const workerUrl = "https://wispy-truth-ba5e.t95n47sd7r.workers.dev"; 
+            const proxyUrl = workerUrl + "?url=" + encodeURIComponent(url);
 
             try {
                 await fetch(proxyUrl);
