@@ -199,7 +199,6 @@
                 return;
             }
 
-            // Собираем ссылку
             const url = BASE_API_URL + 
                 "?action=add" + 
                 "&family_id=" + familyId + 
@@ -207,19 +206,36 @@
                 "&amount=" + amount + 
                 "&category=" + encodeURIComponent(category);
 
-            // ДИАГНОСТИКА: Показываем ссылку на экране!
-            tg.showAlert("Проверка ссылки:\n" + url);
-
             try {
-                await fetch(url, { method: 'GET', mode: 'no-cors' });
+                // СОЗДАЕМ СКРЫТЫЙ IFRAME И ФОРМУ
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.name = 'hidden_iframe';
+                document.body.appendChild(iframe);
+
+                const form = document.createElement('form');
+                form.action = url;
+                form.method = 'GET';
+                form.target = 'hidden_iframe'; // Отправляем в iframe, чтобы страница не перезагружалась
+                document.body.appendChild(form);
                 
+                form.submit(); // Отправляем
+
+                // Закрываем окно и очищаем
                 document.getElementById('modal').style.display = 'none';
                 document.getElementById('input-amount').value = '';
-                setTimeout(loadData, 1500);
+                tg.showAlert("Трата успешно добавлена!");
+                
+                // Ждем 1.5 секунды (чтобы Google успел записать) и перезагружаем список
+                setTimeout(() => {
+                    loadData();
+                    // Удаляем форму и iframe за ненадобностью
+                    document.body.removeChild(form);
+                    document.body.removeChild(iframe);
+                }, 1500);
                 
             } catch (error) {
-                // Если ошибка, показываем её текст
-                tg.showAlert("Ошибка сети: " + error.message);
+                tg.showAlert("Ошибка при отправке");
             }
         }
 
