@@ -23,5 +23,7 @@ jobs:
 
       - name: Run bot
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }} # Токен берется из секретов
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: python bot.py
