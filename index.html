@@ -199,8 +199,6 @@
                 return;
             }
 
-            // Собираем данные прямо в ссылку (GET-запрос)
-            // encodeURIComponent нужен, чтобы русские буквы (например, "Еда") передались правильно
             const url = BASE_API_URL + 
                 "?action=add" + 
                 "&family_id=" + familyId + 
@@ -209,18 +207,20 @@
                 "&category=" + encodeURIComponent(category);
 
             try {
-                // Просто открываем ссылку, Google Apps Script запишет данные
-                await fetch(url);
+                // Отправляем данные. no-cors нужен, чтобы браузер не блокировал запрос
+                await fetch(url, {
+                    method: 'GET',
+                    mode: 'no-cors' 
+                });
                 
-                // Закрываем окно, очищаем форму
                 document.getElementById('modal').style.display = 'none';
                 document.getElementById('input-amount').value = '';
                 tg.showAlert("Трата успешно добавлена!");
                 
-                // Ждем 1.5 секунды (чтобы Google успел записать) и перезагружаем список
                 setTimeout(loadData, 1500);
                 
             } catch (error) {
+                console.error(error);
                 tg.showAlert("Ошибка при отправке");
             }
         }
