@@ -64,7 +64,7 @@
     <div id="transactions-list"></div>
 
     <script>
-        const tg = window.Telegram.WebApp;
+                const tg = window.Telegram.WebApp;
         tg.expand();
 
         const user = tg.initDataUnsafe?.user;
@@ -72,12 +72,22 @@
             document.getElementById('user-name').textContent = user.first_name;
         }
 
-        // ⚠️ ВСТАВЬ СЮДА ССЫЛКУ ИЗ GOOGLE APPS SCRIPT (между кавычками)
-        const API_URL = "https://script.google.com/macros/s/AKfycbxKyLYO9ZI202qfb7S8Rqn0qgbQWjZCof3D_rNl4vO36a4Exg78wps8v86t-YGXz4aK/exec";
+        // Твоя ссылка из Apps Script
+        const BASE_API_URL = "ТВОЯ_ССЫЛКА_ИЗ_ШАГА_1";
+
+        // Получаем family_id из адресной строки (бот его передал)
+        const urlParams = new URLSearchParams(window.location.search);
+        const familyId = urlParams.get('family_id');
 
         async function loadData() {
+            if (!familyId) {
+                document.getElementById('transactions-list').innerHTML = '<p>Ошибка: Семья не найдена. Открой приложение через бота.</p>';
+                return;
+            }
+
             try {
-                const response = await fetch(API_URL);
+                // Добавляем family_id к запросу
+                const response = await fetch(BASE_API_URL + "?family_id=" + familyId);
                 const data = await response.json();
                 
                 const list = document.getElementById('transactions-list');
@@ -107,11 +117,10 @@
                 
             } catch (error) {
                 console.error("Ошибка загрузки:", error);
-                document.getElementById('transactions-list').innerHTML = '<p>Ошибка загрузки данных. Проверь ссылку API.</p>';
+                document.getElementById('transactions-list').innerHTML = '<p>Ошибка загрузки данных.</p>';
             }
         }
 
-        // Запускаем загрузку
         loadData();
     </script>
 </body>
