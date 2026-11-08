@@ -31,7 +31,8 @@ def get_user_family(user_id):
             if row[0] == str(user_id):
                 return row[1]
         return None
-    except Exception:
+    except Exception as e:
+        print(f"Ошибка чтения Users: {e}")
         return None
 
 def save_user_family(user_id, family_id):
@@ -49,14 +50,13 @@ def save_user_family(user_id, family_id):
 def generate_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-# ФУНКЦИЯ СОЗДАНИЯ ФАЙЛА data.json (чтобы приложение могло читать данные)
 def update_json_file():
     try:
         sheet = get_spreadsheet().sheet1
         rows = sheet.get_all_values()
         data = {}
-        # Группируем траты по ID семьи
         for row in rows[1:]:
+            if len(row) < 5: continue
             fam_id = row[0]
             if fam_id not in data:
                 data[fam_id] = []
@@ -66,14 +66,11 @@ def update_json_file():
                 "category": row[3],
                 "date": row[4]
             })
-        
-        # Записываем в файл
         with open("data.json", "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-            
         print("Файл data.json успешно обновлен.")
     except Exception as e:
-        print(f"Ошибка обновления data.json: {e}")
+        print(f"ОШИБКА при обновлении data.json: {e}")
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
@@ -81,52 +78,42 @@ async def cmd_start(message: types.Message):
     family_id = get_user_family(user_id)
     
     if not family_id:
-        await message.answer("Привет! Сначала создай свою пару командой `/create_family`, или присоединись: `/join_family КОД`.")
+        await message.answer("Привет! Сначала создай семью: `/create_family`, или присоединись: `/join_family КОД`.")
         return
 
-    # Обновляем данные перед тем как дать ссылку
-    update_json_file()
+    update_json_file() # Обновляем данные перед выдачей ссылки
 
     web_app_url = f"https://it-itslin.github.io/love-finance-bot/?family_id={family_id}"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Открыть приложение", web_app=WebAppInfo(url=web_app_url))]
     ])
     
-    await message.answer(
-        f"Твой код семьи: `{family_id}`\nДанные обновлены. Открывай приложение:", 
-        reply_markup=keyboard,
-        parse_mode="Markdown"
-    )
+    await message.answer(f"Код семьи: `{family_id}`\nОткрывай приложение:", reply_markup=keyboard, parse_mode="Markdown")
 
-# ПРИЕМ ДАННЫХ ИЗ WEB APP (Кнопка "+")
+# Ловим данные от кнопки "+" в Web App
 @dp.message(F.web_app_data)
 async def handle_web_app_data(message: types.Message):
-    data = json.loads(message.web_app_data.data)
-    user_id = str(message.from_user.id)
-    
     try:
+        data = json.loads(message.web_app_data.data)
+        user_id = str(message.from_user.id)
+        fam_id = data.get('family_id')
+        
+        if not fam_id:
+            await message.answer("Ошибка: не передан ID семьи.")
+            return
+            
         sheet = get_spreadsheet().sheet1
-        sheet.append_row([
-            data['family_id'], 
-            user_id, 
-            data['amount'], 
-            data['category'], 
-            str(message.date)
-        ])
-        
-        # Обновляем json-файл для следующих просмотров
+        sheet.append_row([fam_id, user_id, data.get('amount', '0'), data.get('category', 'Без категории'), str(message.date)])
         update_json_file()
-        
-        await message.answer(f"✅ Через приложение записано: {data['amount']} руб. на «{data['category']}»")
+        await message.answer(f"✅ Записано: {data.get('amount')} руб. на «{data.get('category')}»")
     except Exception as e:
-        await message.answer(f"Ошибка записи: {e}")
+        await message.answer(f"Ошибка при записи: {e}")
 
 @dp.message(Command("create_family"))
 async def cmd_create_family(message: types.Message):
     user_id = str(message.from_user.id)
-    family_id = get_user_family(user_id)
-    if family_id:
-        await message.answer(f"У тебя уже есть семья. Код: `{family_id}`")
+    if get_user_family(user_id):
+        await message.answer("У тебя уже есть семья.")
         return
     new_code = generate_code()
     save_user_family(user_id, new_code)
@@ -134,36 +121,28 @@ async def cmd_create_family(message: types.Message):
 
 @dp.message(Command("join_family"))
 async def cmd_join_family(message: types.Message, command: CommandObject):
-    user_id = str(message.from_user.id)
     if not command.args:
-        await message.answer("Напиши код после команды.")
+        await message.answer("Напиши код: `/join_family ABC123`")
         return
-    code = command.args.upper()
-    save_user_family(user_id, code)
-    await message.answer(f"✅ Ты присоединился к семье `{code}`!")
+    save_user_family(str(message.from_user.id), command.args.upper())
+    await message.answer(f"✅ Присоединился к семье `{command.args.upper()}`!")
 
 async def main():
     print("Бот запущен...")
+    update_json_file() # Пробуем обновить при старте
     
-    # Обновляем файл сразу при старте
-    update_json_file() 
-    
-    # Запускаем бота в фоне
+    # Запускаем опрос в фоне ровно на 30 секунд
     polling_task = asyncio.create_task(dp.start_polling(bot))
-    
-    # Ждем 40 секунд (чтобы обработать сообщения)
-    await asyncio.sleep(40)
-    
-    # Останавливаем бота
+    await asyncio.sleep(30)
     polling_task.cancel()
+    
     try:
         await polling_task
     except asyncio.CancelledError:
         pass
         
-    # Обновляем файл еще раз перед выходом (чтобы сохранить новые данные)
-    update_json_file()
-    print("Бот завершил работу, данные сохранены.")
+    print("Бот завершил работу.")
+    update_json_file() # Сохраняем финальный результат
 
 if __name__ == "__main__":
     asyncio.run(main())
