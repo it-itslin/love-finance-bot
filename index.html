@@ -12,6 +12,7 @@
             color: var(--tg-theme-text-color, #000000);
             margin: 0;
             padding: 16px;
+            padding-bottom: 80px; /* Место под кнопку */
         }
         .header { text-align: center; margin-bottom: 24px; }
         .header h1 { margin: 0; font-size: 24px; }
@@ -44,6 +45,64 @@
         .transaction .date { font-size: 12px; color: #888; }
         .transaction .sum { font-weight: bold; }
         .transaction .sum.expense { color: #FF3B30; }
+
+        /* Стили для кнопки добавления и модального окна */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #FF6B6B;
+            color: white;
+            font-size: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+            cursor: pointer;
+            border: none;
+            z-index: 100;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .modal-content {
+            background: var(--tg-theme-bg-color, #ffffff);
+            padding: 24px;
+            border-radius: 16px;
+            width: 85%;
+            max-width: 320px;
+        }
+        .modal-content h3 { margin-top: 0; text-align: center; }
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .modal-content button {
+            width: 100%;
+            padding: 14px;
+            background: #FF6B6B;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -59,12 +118,30 @@
     </div>
 
     <div class="section-title">Последние траты</div>
-    
-    <!-- Сюда будут загружаться данные -->
     <div id="transactions-list"></div>
 
+    <!-- Кнопка Плюс -->
+    <button class="fab" onclick="openModal()">+</button>
+
+    <!-- Окно добавления траты -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h3>Новая трата</h3>
+            <input type="number" id="input-amount" placeholder="Сумма (например, 500)" required>
+            <select id="input-category">
+                <option value="Еда">Еда</option>
+                <option value="Транспорт">Транспорт</option>
+                <option value="Развлечения">Развлечения</option>
+                <option value="Жилье">Жилье</option>
+                <option value="Здоровье">Здоровье</option>
+                <option value="Другое">Другое</option>
+            </select>
+            <button onclick="addTransaction()">Записать</button>
+        </div>
+    </div>
+
     <script>
-                const tg = window.Telegram.WebApp;
+        const tg = window.Telegram.WebApp;
         tg.expand();
 
         const user = tg.initDataUnsafe?.user;
@@ -72,32 +149,23 @@
             document.getElementById('user-name').textContent = user.first_name;
         }
 
-        // Твоя ссылка из Apps Script
-        const BASE_API_URL = "https://script.google.com/macros/s/AKfycbxKyLYO9ZI202qfb7S8Rqn0qgbQWjZCof3D_rNl4vO36a4Exg78wps8v86t-YGXz4aK/exec";
-
-        // Получаем family_id из адресной строки (бот его передал)
+        const BASE_API_URL = "ТВОЯ_ССЫЛКА_ИЗ_ШАГА_1"; // ССЫЛКА ТУТ
         const urlParams = new URLSearchParams(window.location.search);
         const familyId = urlParams.get('family_id');
+        const userId = user ? user.id : "unknown";
 
         async function loadData() {
-            if (!familyId) {
-                document.getElementById('transactions-list').innerHTML = '<p>Ошибка: Семья не найдена. Открой приложение через бота.</p>';
-                return;
-            }
-
+            if (!familyId) return;
             try {
-                // Добавляем family_id к запросу
                 const response = await fetch(BASE_API_URL + "?family_id=" + familyId);
                 const data = await response.json();
                 
                 const list = document.getElementById('transactions-list');
                 list.innerHTML = '';
-                
                 let total = 0;
                 
                 data.reverse().forEach(item => {
                     total += Number(item.amount);
-                    
                     let dateObj = new Date(item.date);
                     let dateStr = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
                     
@@ -112,12 +180,51 @@
                     `;
                     list.appendChild(div);
                 });
-                
                 document.getElementById('total-amount').textContent = total + ' ₽';
-                
             } catch (error) {
                 console.error("Ошибка загрузки:", error);
-                document.getElementById('transactions-list').innerHTML = '<p>Ошибка загрузки данных.</p>';
+            }
+        }
+
+        function openModal() {
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        async function addTransaction() {
+            const amount = document.getElementById('input-amount').value;
+            const category = document.getElementById('input-category').value;
+
+            if (!amount) {
+                tg.showAlert("Пожалуйста, введите сумму");
+                return;
+            }
+
+            const data = {
+                family_id: familyId,
+                user_id: userId,
+                amount: amount,
+                category: category
+            };
+
+            try {
+                // Отправляем данные в Apps Script
+                await fetch(BASE_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Важно для Google Apps Script
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: JSON.stringify(data)
+                });
+                
+                // Закрываем окно, очищаем форму и перезагружаем список
+                document.getElementById('modal').style.display = 'none';
+                document.getElementById('input-amount').value = '';
+                tg.showAlert("Трата успешно добавлена!");
+                
+                // Ждем секунду (чтобы Apps Script успел записать) и обновляем список
+                setTimeout(loadData, 1000);
+                
+            } catch (error) {
+                tg.showAlert("Ошибка при отправке");
             }
         }
 
