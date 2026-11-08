@@ -205,12 +205,11 @@
             const category = document.getElementById('input-category').value;
 
             if (!amount) {
-                if (tg) tg.showAlert("Пожалуйста, введите сумму");
-                else alert("Пожалуйста, введите сумму");
+                tg.showAlert("Пожалуйста, введите сумму");
                 return;
             }
 
-            if (tg && tg.sendData) {
+            try {
                 // Отправляем данные боту
                 const dataToSend = {
                     amount: amount,
@@ -218,8 +217,11 @@
                     family_id: familyId
                 };
                 tg.sendData(JSON.stringify(dataToSend));
-            } else {
-                alert("Эта кнопка работает только внутри Telegram!");
+                
+                // Принудительно закрываем приложение
+                tg.close();
+            } catch (error) {
+                tg.showAlert("Ошибка: " + error.message);
             }
         }
 
